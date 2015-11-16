@@ -5,16 +5,52 @@ class Helper():
     host = base64.b64decode('aHR0cDovL2dvc3BvZGFyaS5jb20v')
     
     def get_categories(self, id):
+        cats = []
+        #if user wants to watch seasons, get them from REST API:
+        if id == -4:
+            cats = self.get_seasons()
+        else:
+            #Otherwise get them from file
+            try:
+                filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'categories.json')
+                with open(filename) as data_file: 
+                    data = json.load(data_file)
+                cats = data["categories"][id]
+            except Exception, er:
+                xbmc.log("Gospodari | get_categories(" + str(id) + ") | Error: " + str(er))
+            
+        return cats
+    
+    def get_seasons(self):
+        seasons = []
         try:
-            filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'categories.json')
-            with open(filename) as data_file: 
-                data = json.load(data_file)
-            return data["categories"][id]
+            url = 'http://playapi.mtgx.tv/v3/seasons/videolist?format=4694'
+            res = Request(url)
+            data = json.loads(res)
+            seasons = data['_embedded']['seasons']
         except Exception, er:
-            xbmc.log("Error:" + str(er))
-            return json.load("{}")
+            xbmc.log("Gospodari | Error:" + str(er))
+        return seasons
+    
+    def get_full_shows(self, id, page):
+        videos = []
+        try:
+            url = 'http://playapi.mtgx.tv/v3/videos?season=%s&page=%s&order=-visible_from' % (str(id), str(page))
+            res = Request(url)
+            data = json.loads(res)
+            videos = data['_embedded']['videos']
+            
+            #check if there are more videos
+            if page != data['count']['total_pages']:
+                self.has_more_videos = True
+            
+        except Exception, er:
+            xbmc.log("Gospodari | Error:" + str(er))
+        return videos
     
     def get_videos(self, id, page):
+        if id == 4:
+            return self.get_season_videos(id)
         if page == 1:
             response = Request(self.get_url(id))
             if id < 0 and id > -4: #top20 videos
@@ -81,7 +117,7 @@ class Helper():
                     video['title'] = titles[i]
                     videos.append(video) 
         except Exception, er:
-            xbmc.log("Error:" + str(er))
+            xbmc.log("Gospodari | extract_videos() " + str(er))
         return videos
     
     def get_top20_videos(self, html):
@@ -131,17 +167,37 @@ class Helper():
         return videos    
         
         
-    def get_video_stream(self, id):
+    def get_video_stream(self, id, isFullShow):
+        stream = ''
         try:
-            url = 'http://gospodari.com/mobile/view/' + str(id)
-            html = Request(url)
-            #file:"http://v.gospodari.com/f/videos/80/d93e8b96e484babd7ad35bee7e09847f.mp4"
-            url = re.compile('file[:"\']+(.*?\.[a-zA-Z0-9]+)["\'\s]{0,1}\}').findall(html)
-            if len(url) > 0:
-                return url[0]
+            if isFullShow:
+                url = 'http://playapi.mtgx.tv/v3/videos/stream/' + str(id) 
+                res = Request(url)
+                data = json.loads(res)
+                medium = data['streams']['medium']
+                high = data['streams']['high']
+                hls = data['streams']['hls']
+                
+                if high != None:
+                    stream = high
+                elif medium != 'video://vod/':
+                    if 'stream.novatv.bg' in medium:
+                        stream = medium.replace('rtmp://stream.novatv.bg/mediacache/mp4:http/', 'http://videobg.novatv.bg/')
+                    elif 'host.bg' in medium:
+                        stream = medium.replace('rtmp://stream.by.host.bg/mediacache/flv:http/', 'http://videobg.novatv.bg/')
+                elif hls != None:
+                    stream = hls
+            else:
+                url = 'http://gospodari.com/mobile/view/' + str(id)
+                html = Request(url)
+                #file:"http://v.gospodari.com/f/videos/80/d93e8b96e484babd7ad35bee7e09847f.mp4"
+                url = re.compile('file[:"\']+(.*?\.[a-zA-Z0-9]+)["\'\s]{0,1}\}').findall(html)
+                if len(url) > 0:
+                    stream = url[0]
         except Exception, er:
             xbmc.log("Error in get_video_stream(id = %s): " % id + str(er))
-            return ''
+        
+        return stream
     
 def Request(url, data = ''):
     xbmc.log("Gospodari | Sending request to: " + url)
