@@ -1,9 +1,0 @@
-plugin.video.gospodari\addon.py
-plugin.video.gospodari\addon.xml
-plugin.video.gospodari\icon.png
-plugin.video.gospodari\changelog.txt
-plugin.video.gospodari\LICENSE
-plugin.video.gospodari\resources\__init__.py
-plugin.video.gospodari\resources\lib\__init__.py
-plugin.video.gospodari\resources\lib\helper.py
-plugin.video.gospodari\resources\lib\categories.json
