@@ -107,15 +107,16 @@ class Helper():
             xbmc.log("HTML: " + html)
             regex = 'gospodari\.com/mobile/view/([0-9]+)'
             ids = re.compile(regex).findall(html)
-            icons = re.compile('i\.gospodari\.com/(.+)\.jpg').findall(html)
-            titles = re.compile('class[="\'\s]+title["\s\']+>(.+?)</div').findall(html)
-            if len(ids) == len(icons) and len(icons) == len(titles):
-                for i in range(0, len(ids)):
-                    video = {}
-                    video['id'] = ids[i]
-                    video['icon'] = 'http://i.gospodari.com/%s.jpg' % icons[i]
-                    video['title'] = titles[i]
-                    videos.append(video) 
+            icons_and_titles = re.compile('i\.gospodari\.com/(.+?)\.jpg".*alt="(.*?)"').findall(html)
+            if len(ids) == len(icons_and_titles):
+              import HTMLParser
+              for i in range(0, len(ids)):
+                  video = {}
+                  video['id'] = ids[i]
+                  video['icon'] = 'http://i.gospodari.com/%s.jpg' % icons_and_titles[i][0]
+                  h = HTMLParser.HTMLParser()
+                  video['title'] = h.unescape(icons_and_titles[i][1])
+                  videos.append(video) 
         except Exception, er:
             xbmc.log("Gospodari | extract_videos() " + str(er))
         return videos
