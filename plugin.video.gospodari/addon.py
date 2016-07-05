@@ -1,15 +1,14 @@
 ﻿# -*- coding: utf-8 -*-
-import re, sys, urllib, os.path
+import re, sys, urllib, os.path, time
 import xbmc, xbmcgui, xbmcplugin, xbmcaddon
 from resources.lib.helper import Mode, Helper
+
 
 reload(sys)  
 sys.setdefaultencoding('utf8')
 	
-_addon = xbmcaddon.Addon(id='plugin.video.gospodari')
-helper = Helper()
-   
-def CATEGORIES():
+
+def Categories():
 	addDir('Гафове', 1)
 	addDir('Репоражи', 2)
 	addDir('Скечове', 3)
@@ -17,8 +16,9 @@ def CATEGORIES():
 	addDir('Топ 20', 6)
 	addDir('Зоополиция', 7, Mode.Videos, 'http://gospodari.com/mobile/zoopolice')
 	addDir('Цели предавания', 0)
+	helper.update('browse', 'Categories')
 	
-def SUBCATEGORIES(cat_id):
+def Subcategories(cat_id):
 	if cat_id == 0: #if we are looking for full seasons
 		seasons = helper.get_seasons()
 		for s in seasons:
@@ -28,7 +28,7 @@ def SUBCATEGORIES(cat_id):
 		for s in data:
 			addDir(s.get_text().encode('utf-8'), cat_id, Mode.Videos, s['href'])
 	
-def VIDEOS(cat_id, url, page):
+def Videos(cat_id, url, page):
 	videos = helper.get_videos(cat_id, url, page)
 	for v in videos:
 		addLink(v['title'].encode('utf-8'), v['url'], v['icon'])
@@ -37,7 +37,7 @@ def VIDEOS(cat_id, url, page):
 		page = page + 1
 		addDir('Следваща страница >>>', helper.cat_id, Mode.Videos, '', page)
 	
-def FULLSHOWS(show_id, page):
+def FullShows(show_id, page):
 	videos = helper.get_full_shows(show_id, page)
 	for v in videos:
 		icon = v['_links']['image']['href'].replace('{size}', '768x432')
@@ -47,7 +47,7 @@ def FULLSHOWS(show_id, page):
 		page = page + 1
 		addDir('Следваща страница >>>', show_id, Mode.FullShows, '', page)
 	
-def PLAY(url, name, img, isFullShow):
+def Play(url, name, img, isFullShow):
 	video = helper.get_video_info(url, isFullShow)
 	xbmc.log('Gospodari | play() | Will try to play item: ' + video['url'])
 	li = xbmcgui.ListItem(iconImage = img, thumbnailImage = img, path = video['url'])
@@ -88,42 +88,49 @@ def get_params():
 				param[splitparams[0]]=splitparams[1]
 	return param
 
-params = get_params()
+try:
+	addon = xbmcaddon.Addon(id='plugin.video.gospodari')
+	helper = Helper(addon)
 
-try: id = int(params["id"])
-except: id = None
+	params = get_params()
 
-try: name = urllib.unquote_plus(params["name"])
-except: name = None
+	try: id = int(params["id"])
+	except: id = None
 
-try: url = urllib.unquote_plus(params["url"])
-except: url = None
+	try: name = urllib.unquote_plus(params["name"])
+	except: name = None
 
-try: icon = urllib.unquote_plus(params["icon"])
-except: icon = xbmc.translatePath(os.path.join(_addon.getAddonInfo('path'), "icon.png"))
+	try: url = urllib.unquote_plus(params["url"])
+	except: url = None
 
-try: mode = int(params["mode"])
-except: mode = None
+	try: icon = urllib.unquote_plus(params["icon"])
+	except: icon = xbmc.translatePath(os.path.join(addon.getAddonInfo('path'), "icon.png"))
 
-try: page = int(params["page"])
-except: page = 1
+	try: mode = int(params["mode"])
+	except: mode = None
 
-try: isfullshow = params["isfullshow"] == 'True'
-except: isfullshow = False
+	try: page = int(params["page"])
+	except: page = 1
 
-if mode == None:
-	CATEGORIES()
-    
-elif mode == Mode.Subcategories:
-	SUBCATEGORIES(id)
+	try: isfullshow = params["isfullshow"] == 'True'
+	except: isfullshow = False
 
-elif mode == Mode.Videos:
-	VIDEOS(id, url, page)
+	if mode == None:
+		Categories()
+			
+	elif mode == Mode.Subcategories:
+		Subcategories(id)
 
-elif mode == Mode.Play:
-	PLAY(url, name, icon, isfullshow)
+	elif mode == Mode.Videos:
+		Videos(id, url, page)
 
-elif mode == Mode.FullShows:
-	FULLSHOWS(id, page)
+	elif mode == Mode.Play:
+		Play(url, name, icon, isfullshow)
 
+	elif mode == Mode.FullShows:
+		FullShows(id, page)
+	
+except Exception, e:
+  helper.update('exception', str(e.args[0]), sys.exc_info())
+	
 xbmcplugin.endOfDirectory(int(sys.argv[1]))
