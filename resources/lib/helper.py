@@ -164,7 +164,8 @@ class Helper:
 				if not url.startswith('http'): 
 					url = 'http://gospodari.com/%s' % url
 				html = Request(url)
-				stream['url'] = re.compile('file[:"\'\s]+(http.+?mp4)').findall(html)[0]
+				stream['url'] = re.compile('playerInstance.load\(\[.*?file[:"\'\s]+(http.+?mp4)', re.DOTALL).findall(html)[0]
+				xbmc.log("stream['url']: %s" % stream['url'])
 				try:
 					stream['date'] = re.compile('ubuntubold">(.+?)<').findall(html)[0]
 				except: stream['date'] = ''
